@@ -359,6 +359,28 @@ body[data-theme="dark"] .site-header {
   color: var(--muted);
 }
 
+.footer-meta {
+  display: grid;
+  justify-items: end;
+  gap: 0.4rem;
+  text-align: right;
+}
+
+.footer-meta p {
+  margin: 0;
+}
+
+.footer-admin {
+  color: var(--text);
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.footer-copyright {
+  font-size: 0.82rem;
+}
+
 .cart-panel {
   position: fixed;
   top: 50%;
@@ -803,6 +825,10 @@ body[data-theme="dark"] .site-header {
   .header-inner,
   .footer-inner {
     flex-wrap: wrap;
+  }
+
+  .footer-meta {
+    flex: 1 1 100%;
   }
 }
 
