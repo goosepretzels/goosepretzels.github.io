@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>Checkout | Goose Pretzels</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body data-page="checkout">
+    <header class="site-header">
+      <div class="container header-inner">
+        <a href="index.html" class="brand" aria-label="Goose Pretzels home">
+          <img src="Assets/Logo.svg" alt="Goose Pretzels logo" />
+          <span>Goose Pretzels</span>
+        </a>
+        <nav class="main-nav" aria-label="Main navigation">
+          <a href="index.html#menu">Menu</a>
+          <a href="index.html#about">About</a>
+          <a href="admin.html">Admin</a>
+        </nav>
+        <button class="theme-toggle" type="button" aria-label="Toggle color theme">
+          <span class="toggle-icon">☀️</span>
+        </button>
+      </div>
+    </header>
+
+    <main class="checkout-page">
+      <div class="container checkout-shell">
+        <section class="form-card">
+          <p class="eyebrow">Checkout</p>
+          <h1>Finalize your pretzel order</h1>
+
+          <form id="checkoutForm" class="form-grid">
+            <div class="field">
+              <label for="name">Full name</label>
+              <input id="name" name="name" type="text" placeholder="Your name" required />
+            </div>
+
+            <div class="field">
+              <label for="email">Email</label>
+              <input id="email" name="email" type="email" placeholder="you@example.com" required />
+            </div>
+
+            <div class="field">
+              <label for="phone">Phone number</label>
+              <input id="phone" name="phone" type="tel" placeholder="Optional" />
+            </div>
+
+            <div class="field">
+              <label for="notes">Order notes</label>
+              <textarea id="notes" name="notes" rows="5" placeholder="Any flavors, quantities, or pickup details..."></textarea>
+            </div>
+
+            <button class="submit-btn" type="submit">Send order request</button>
+          </form>
+
+          <p class="checkout-note">
+            All transactions are handled in person and paid in cash at pickup. Orders are valid for 2 weeks and can be updated by email.
+          </p>
+        </section>
+
+        <aside class="summary-card">
+          <p class="eyebrow">Order summary</p>
+          <div id="checkoutSummary"></div>
+        </aside>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container footer-inner">
+        <div>
+          <strong>Goose Pretzels</strong>
+          <p>Direct order site only.</p>
+        </div>
+        <div>
+          <p>Email: finn1212@gmail.com</p>
+        </div>
+      </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-config.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@5/dist/email.min.js"></script>
+    <script src="script.js"></script>
+  </body>
+</html>

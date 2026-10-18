@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="description" content="Goose Pretzels direct-order website for custom pretzel orders and pickup transactions." />
+    <title>Goose Pretzels</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body data-page="home">
+    <header class="site-header">
+      <div class="container header-inner">
+        <a href="index.html" class="brand" aria-label="Goose Pretzels home">
+          <img src="Assets/Logo.svg" alt="Goose Pretzels logo" />
+          <span>Goose Pretzels</span>
+        </a>
+
+        <nav class="main-nav" aria-label="Main navigation">
+          <a href="#menu">Menu</a>
+          <a href="#about">About</a>
+          <a href="admin.html">Admin</a>
+        </nav>
+
+        <button class="theme-toggle" type="button" aria-label="Toggle color theme">
+          <span class="toggle-icon">☀️</span>
+        </button>
+      </div>
+    </header>
+
+    <main>
+      <section class="hero">
+        <div class="container hero-grid">
+          <div class="hero-copy">
+            <p class="eyebrow">Seasoned & crunchy</p>
+            <h1>Hard pretzels with bold seasoning.</h1>
+            <p class="lede">
+              Original and crabby flavored hard pretzels, made for snacking, parties, and simple pickup orders.
+            </p>
+            <div class="hero-actions">
+              <a class="primary-btn" href="#menu">Order now</a>
+              <a class="secondary-btn" href="checkout.html">Checkout</a>
+            </div>
+            <ul class="hero-notes">
+              <li>Email requests</li>
+              <li>Cash-only in-person pickup</li>
+              <li>Orders expire after 2 weeks</li>
+            </ul>
+          </div>
+
+          <div class="hero-card">
+            <div class="mini-label">Current flavors</div>
+            <h2>Original & Crabby</h2>
+            <div class="mini-price">2 flavors</div>
+            <ul>
+              <li>Hard pretzels with seasoning</li>
+              <li>Fresh, crunchy texture</li>
+              <li>Two flavor options</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section class="menu" id="menu">
+        <div class="container">
+          <div class="section-heading">
+            <p class="eyebrow">Menu</p>
+            <h2>Choose your pretzel favorites</h2>
+          </div>
+          <div class="product-grid" id="productGrid"></div>
+        </div>
+      </section>
+
+      <section class="info-strip" id="about">
+        <div class="container info-grid">
+          <div>
+            <p class="eyebrow">Pickup policy</p>
+            <h3>All payments are handled in person.</h3>
+          </div>
+          <div>
+            <p>Place your request by email, confirm your total, and pay with cash when you pick up your order.</p>
+          </div>
+          <div>
+            <p>Orders are subject to a 2-week expiration window from the date the request is received.</p>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <aside class="cart-panel" aria-label="Shopping cart">
+      <div class="container cart-box">
+        <div class="cart-header">
+          <h3>Your order</h3>
+          <span id="cartCount">0 items</span>
+        </div>
+        <div id="cartItems" class="cart-items"></div>
+        <div class="cart-total-row">
+          <span>Total</span>
+          <strong id="cartTotal">$0.00</strong>
+        </div>
+        <a class="primary-btn full-width" href="checkout.html">Continue to checkout</a>
+      </div>
+    </aside>
+
+    <footer class="site-footer">
+      <div class="container footer-inner">
+        <div>
+          <strong>Goose Pretzels</strong>
+          <p>Direct order site only.</p>
+        </div>
+        <div>
+          <p>Email: finn1212@gmail.com</p>
+        </div>
+      </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-config.js"></script>
+    <script src="script.js"></script>
+  </body>
+</html>

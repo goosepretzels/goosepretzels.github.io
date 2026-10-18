@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>Admin | Goose Pretzels</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body data-page="admin">
+    <header class="site-header">
+      <div class="container header-inner">
+        <a href="index.html" class="brand" aria-label="Goose Pretzels home">
+          <img src="Assets/Logo.svg" alt="Goose Pretzels logo" />
+          <span>Goose Pretzels</span>
+        </a>
+        <nav class="main-nav" aria-label="Main navigation">
+          <a href="index.html#menu">Menu</a>
+          <a href="index.html#about">About</a>
+          <a href="checkout.html">Checkout</a>
+        </nav>
+        <button class="theme-toggle" type="button" aria-label="Toggle color theme">
+          <span class="toggle-icon">☀️</span>
+        </button>
+      </div>
+    </header>
+
+    <main class="admin-page">
+      <div class="container admin-shell" id="adminPage">
+        <section id="adminLogin" class="admin-card admin-login">
+          <div>
+            <p class="eyebrow">Admin access</p>
+            <h1>Order portal</h1>
+          </div>
+
+          <form id="loginForm">
+            <div class="field">
+              <label for="adminEmail">Admin email</label>
+              <input id="adminEmail" type="email" name="email" autocomplete="username" placeholder="Admin email" required />
+            </div>
+            <div class="field">
+              <label for="adminPassword">Password</label>
+              <input id="adminPassword" type="password" name="password" autocomplete="current-password" placeholder="Enter admin password" required />
+            </div>
+            <button class="primary-btn full-width" type="submit">Access orders</button>
+          </form>
+
+          <p id="adminError" class="admin-note" aria-live="polite"></p>
+        </section>
+
+        <section id="ordersBlock" class="admin-card hidden">
+          <div class="cart-header">
+            <div>
+              <p class="eyebrow">Orders</p>
+              <h2>Current requests</h2>
+            </div>
+            <button id="logoutButton" class="secondary-btn" type="button">Logout</button>
+          </div>
+
+          <div class="catalog-manager" style="margin-top: 1.5rem;">
+            <div class="cart-header">
+              <h3>EmailJS Settings</h3>
+            </div>
+
+            <form id="emailSettingsForm" class="form-grid" style="margin-top: 1rem;">
+              <div class="field">
+                <label for="emailServiceId">Service ID</label>
+                <input id="emailServiceId" name="serviceId" type="text" autocomplete="off" required />
+              </div>
+              <div class="field">
+                <label for="emailTemplateId">Template ID</label>
+                <input id="emailTemplateId" name="templateId" type="text" autocomplete="off" required />
+              </div>
+              <div class="field">
+                <label for="emailPublicKey">Public Key</label>
+                <input id="emailPublicKey" name="publicKey" type="text" autocomplete="off" required />
+              </div>
+              <div class="inline-actions">
+                <button class="primary-btn" type="submit">Save EmailJS settings</button>
+                <p id="emailSettingsStatus" class="admin-note" aria-live="polite"></p>
+              </div>
+            </form>
+          </div>
+
+          <div class="catalog-manager" style="margin-top: 1.5rem;">
+            <div class="cart-header">
+              <h3>Catalog Manager</h3>
+            </div>
+
+            <form id="productForm" class="catalog-form">
+              <div class="form-grid">
+                <div class="field">
+                  <label for="newProductName">Product name</label>
+                  <input id="newProductName" name="name" type="text" placeholder="Original Hard Pretzel" required />
+                </div>
+                <div class="field">
+                  <label for="newProductPrice">Price</label>
+                  <input id="newProductPrice" name="price" type="number" min="0" step="0.01" placeholder="8.00" required />
+                </div>
+                <div class="field">
+                  <label for="newProductDescription">Description</label>
+                  <input id="newProductDescription" name="description" type="text" placeholder="Classic savory seasoning" required />
+                </div>
+                <div class="field">
+                  <label for="newProductEmoji">Emoji</label>
+                  <input id="newProductEmoji" name="emoji" type="text" maxlength="2" placeholder="🥨" />
+                </div>
+              </div>
+              <div class="inline-actions">
+                <button class="primary-btn" type="submit">Add item listing</button>
+              </div>
+            </form>
+
+            <div id="catalogList" class="catalog-list" style="margin-top: 1.25rem;"></div>
+          </div>
+
+          <table class="order-table" style="margin-top: 2rem;">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Items</th>
+                <th>Total</th>
+                <th>Created</th>
+                <th>Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="ordersList"></tbody>
+          </table>
+        </section>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container footer-inner">
+        <div>
+          <strong>Goose Pretzels</strong>
+          <p>Direct order site only.</p>
+        </div>
+        <div>
+          <p>Email: finn1212@gmail.com</p>
+        </div>
+      </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-config.js"></script>
+    <script src="script.js"></script>
+  </body>
+</html>
