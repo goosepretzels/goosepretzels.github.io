@@ -6,10 +6,10 @@ The site uses Supabase for a shared menu, EmailJS configuration, and order list.
 1. Create a free project at [Supabase](https://supabase.com/dashboard).
 2. Open the project's SQL Editor, paste the contents of `supabase/schema.sql`, and run it. The script creates the shared tables and row-level security policies.
 3. In Authentication settings, disable public sign-ups. Then create the owner/admin user from the project's Users page. Only this account should be able to change the catalog and EmailJS settings or read/delete orders.
-4. In Project Settings > API Keys, copy the Project URL and the publishable key. Put them in `supabase-config.js` as `url` and `publishableKey`. These browser values are public; never put a `secret` or `service_role` key in this file.
+4. In your Supabase project, click **Connect** near the top of the dashboard. Copy the **Project URL** and **Publishable key** into `supabase-config.js`, replacing the empty `url` and `publishableKey` values. These browser values are public; never put a `secret` or `service_role` key in this file. This edits your local copy only; it does not change the live website yet.
 5. Open the admin page on the same browser that has the existing local catalog/orders, then sign in with the Supabase admin account. On the first sign-in, existing local catalog, EmailJS settings, and orders are copied to Supabase if they are not already there.
 6. Use EmailJS Settings in the admin page to save the Service ID, Template ID, and Public Key. This is now shared with all visitors.
-7. Deploy the updated site. The live site and local development site will use the same Supabase project once both are configured with the same URL and publishable key.
+7. In VS Code Source Control, commit the changed files and choose **Sync Changes** or **Push**. Wait for GitHub Pages to finish deploying in the repository's **Actions** tab. Only then will the live site use the updated code and Supabase config. Local development and the live site will use the same project after deployment.
 
 The database is protected with row-level security. Anyone can read the menu and EmailJS's public configuration and submit an order. Only signed-in users can manage the catalog/settings or read and delete orders. Keep public sign-ups disabled so only the admin account can access those operations.
 

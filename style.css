@@ -314,6 +314,16 @@ body[data-theme="dark"] .site-header {
   width: 100%;
 }
 
+.product-card .field select {
+  min-height: 52px;
+  font-family: inherit;
+  font-size: 1rem;
+}
+
+.product-card .field + .primary-btn {
+  margin-top: 0.9rem;
+}
+
 .info-strip {
   padding: 0 0 4rem;
 }
