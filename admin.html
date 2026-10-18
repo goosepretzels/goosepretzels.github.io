@@ -85,17 +85,14 @@
           <div class="catalog-manager" style="margin-top: 1.5rem;">
             <div class="cart-header">
               <h3>Catalog Manager</h3>
+              <button id="toggleProductForm" class="primary-btn" type="button" aria-expanded="false" aria-controls="productForm">Add product</button>
             </div>
 
-            <form id="productForm" class="catalog-form">
+            <form id="productForm" class="catalog-form hidden">
               <div class="form-grid">
                 <div class="field">
                   <label for="newProductName">Product name</label>
                   <input id="newProductName" name="name" type="text" placeholder="Original Hard Pretzel" required />
-                </div>
-                <div class="field">
-                  <label for="newProductPrice">Price</label>
-                  <input id="newProductPrice" name="price" type="number" min="0" step="0.01" placeholder="8.00" required />
                 </div>
                 <div class="field">
                   <label for="newProductDescription">Description</label>
@@ -106,8 +103,16 @@
                   <input id="newProductEmoji" name="emoji" type="text" maxlength="2" placeholder="🥨" />
                 </div>
               </div>
+              <div class="product-size-editor">
+                <div class="cart-header">
+                  <h4>Sizes and prices</h4>
+                  <button class="secondary-btn" data-add-new-size type="button">Add size</button>
+                </div>
+                <div id="newProductSizes" class="size-price-list"></div>
+              </div>
               <div class="inline-actions">
-                <button class="primary-btn" type="submit">Add item listing</button>
+                <button class="primary-btn" type="submit">Save product</button>
+                <button id="cancelProductForm" class="secondary-btn" type="button">Cancel</button>
               </div>
             </form>
 

@@ -8,30 +8,64 @@ const backend = window.supabase?.createClient && supabaseConfig.url && supabaseC
   : null;
 
 const defaultProducts = [
-  { id: 'original', name: 'Original Hard Pretzel', price: 8, emoji: '🥨', description: 'Classic hard pretzel with savory seasoning.' },
-  { id: 'crabby', name: 'Crabby Hard Pretzel', price: 9, emoji: '🦀', description: 'A bold crabby-seasoned hard pretzel with extra flavor.' }
+  { id: 'original', name: 'Original Hard Pretzel', sizes: [{ id: 'small', name: 'Small', price: 5 }, { id: 'large', name: 'Large', price: 8 }], emoji: '🥨', description: 'Classic hard pretzel with savory seasoning.' },
+  { id: 'crabby', name: 'Crabby Hard Pretzel', sizes: [{ id: 'small', name: 'Small', price: 5 }, { id: 'large', name: 'Large', price: 8 }], emoji: '🦀', description: 'A bold crabby-seasoned hard pretzel with extra flavor.' }
 ];
 
-let productsCache = [...defaultProducts];
+function normalizeProduct(product) {
+  const legacyLargePrice = product.id === 'original' || product.id === 'crabby'
+    ? 8
+    : Number(product.price || 8);
+  const legacyPrices = product.prices && typeof product.prices === 'object'
+    ? product.prices
+    : { Small: Number(product.smallPrice ?? 5), Large: Number(product.largePrice ?? legacyLargePrice) };
+  const sizes = Array.isArray(product.sizes)
+    ? product.sizes
+    : Object.entries(legacyPrices)
+      .map(([name, price]) => ({ name: name.replace(/\b\w/g, letter => letter.toUpperCase()), price }))
+      .sort((left, right) => {
+        const order = { small: 0, large: 1 };
+        return (order[left.name.toLowerCase()] ?? 2) - (order[right.name.toLowerCase()] ?? 2);
+      });
+  const seenSizeIds = new Set();
+
+  const normalizedSizes = sizes.map(size => {
+    const name = String(size.name || '').trim();
+    const id = String(size.id || name).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    return { id, name, price: Number(size.price) };
+  }).filter(size => {
+    if (!size.id || !size.name || !Number.isFinite(size.price) || size.price < 0 || seenSizeIds.has(size.id)) return false;
+    seenSizeIds.add(size.id);
+    return true;
+  });
+
+  return {
+    ...product,
+    sizes: normalizedSizes.length ? normalizedSizes : [{ id: 'small', name: 'Small', price: 5 }]
+  };
+}
+
+let productsCache = defaultProducts.map(normalizeProduct);
 let emailJsConfigCache = {};
 
 function getProducts() {
   try {
     const stored = JSON.parse(localStorage.getItem(PRODUCTS_KEY) || 'null');
-    return Array.isArray(stored) && stored.length ? stored : [...defaultProducts];
+    return Array.isArray(stored) && stored.length ? stored.map(normalizeProduct) : defaultProducts.map(normalizeProduct);
   } catch (error) {
-    return [...defaultProducts];
+    return defaultProducts.map(normalizeProduct);
   }
 }
 
 async function saveProducts(products) {
+  const normalizedProducts = products.map(normalizeProduct);
   if (backend) {
-    const { error } = await backend.from('shared_settings').upsert({ key: 'products', value: products });
+    const { error } = await backend.from('shared_settings').upsert({ key: 'products', value: normalizedProducts });
     if (error) throw error;
   } else {
-    localStorage.setItem(PRODUCTS_KEY, JSON.stringify(products));
+    localStorage.setItem(PRODUCTS_KEY, JSON.stringify(normalizedProducts));
   }
-  productsCache = products;
+  productsCache = normalizedProducts;
 }
 
 function getEmailJsConfig() {
@@ -64,8 +98,8 @@ async function loadSharedSettings() {
 
   const settings = Object.fromEntries((data || []).map(setting => [setting.key, setting.value]));
   productsCache = Array.isArray(settings.products) && settings.products.length
-    ? settings.products
-    : [...defaultProducts];
+    ? settings.products.map(normalizeProduct)
+    : defaultProducts.map(normalizeProduct);
   emailJsConfigCache = settings.emailjs || {};
 }
 
@@ -146,23 +180,26 @@ function initTheme() {
   }
 }
 
-function addToCart(productId) {
+function addToCart(productId, size) {
   const cart = getCart();
-  const existing = cart.find(item => item.id === productId);
+  const product = productsCache.find(entry => entry.id === productId);
+  const selectedSize = product?.sizes.find(entry => entry.id === size)?.id || product?.sizes[0]?.id;
+  if (!selectedSize) return;
+  const existing = cart.find(item => item.id === productId && (item.size || 'small') === selectedSize);
 
   if (existing) {
     existing.quantity += 1;
   } else {
-    cart.push({ id: productId, quantity: 1 });
+    cart.push({ id: productId, size: selectedSize, quantity: 1 });
   }
 
   saveCart(cart);
   renderCart();
 }
 
-function adjustCartQuantity(productId, change) {
+function adjustCartQuantity(productId, size, change) {
   const cart = getCart();
-  const itemIndex = cart.findIndex(item => item.id === productId);
+  const itemIndex = cart.findIndex(item => item.id === productId && (item.size || 'small') === size);
 
   if (itemIndex === -1) return;
 
@@ -183,11 +220,16 @@ function getCartSummary() {
   const items = cart.map(item => {
     const product = products.find(entry => entry.id === item.id);
     if (!product) return null;
+    const size = product.sizes.find(entry => entry.id === (item.size || 'small')) || product.sizes[0];
+    if (!size) return null;
 
     return {
       ...product,
+      size: size.id,
+      sizeName: size.name,
+      price: size.price,
       quantity: item.quantity,
-      lineTotal: Number(product.price) * Number(item.quantity)
+      lineTotal: size.price * Number(item.quantity)
     };
   }).filter(Boolean);
 
@@ -216,17 +258,17 @@ function renderCart() {
   container.innerHTML = items.map(item => `
     <div class="cart-item">
       <div class="cart-item-info">
-        <strong>${item.name}</strong>
+        <strong>${item.name} <span class="cart-item-size">(${item.sizeName} bag)</span></strong>
         <div>${item.quantity} × ${currency(item.price)}</div>
       </div>
 
       <div class="cart-item-controls">
         <div class="quantity-box">
-          <button class="qty-btn" type="button" data-change-qty="${item.id}" data-direction="-1" aria-label="Reduce ${item.name} quantity">−</button>
+          <button class="qty-btn" type="button" data-change-qty="${item.id}" data-size="${item.size}" data-direction="-1" aria-label="Reduce ${item.name} ${item.sizeName} bag quantity">−</button>
           <span>${item.quantity}</span>
-          <button class="qty-btn" type="button" data-change-qty="${item.id}" data-direction="1" aria-label="Increase ${item.name} quantity">+</button>
+          <button class="qty-btn" type="button" data-change-qty="${item.id}" data-size="${item.size}" data-direction="1" aria-label="Increase ${item.name} ${item.sizeName} bag quantity">+</button>
         </div>
-        <button class="remove-item-btn" type="button" data-remove-item="${item.id}" aria-label="Remove ${item.name} from order">Remove</button>
+        <button class="remove-item-btn" type="button" data-remove-item="${item.id}" data-size="${item.size}" aria-label="Remove ${item.name} ${item.sizeName} bag from order">Remove</button>
       </div>
 
       <div>${currency(item.lineTotal)}</div>
@@ -236,14 +278,15 @@ function renderCart() {
   container.querySelectorAll('[data-change-qty]').forEach(button => {
     button.addEventListener('click', () => {
       const productId = button.dataset.changeQty;
+      const size = button.dataset.size || 'small';
       const direction = Number(button.dataset.direction || 0);
-      adjustCartQuantity(productId, direction);
+      adjustCartQuantity(productId, size, direction);
     });
   });
 
   container.querySelectorAll('[data-remove-item]').forEach(button => {
     button.addEventListener('click', () => {
-      adjustCartQuantity(button.dataset.removeItem, -9999);
+      adjustCartQuantity(button.dataset.removeItem, button.dataset.size || 'small', -9999);
     });
   });
 }
@@ -266,13 +309,30 @@ function renderProductGrid() {
         <h3>${product.name}</h3>
         <p>${product.description || 'Seasoned hard pretzel.'}</p>
         <div class="product-meta">
-          <span class="product-price">${currency(product.price)}</span>
+          <span class="product-price" data-current-price="${product.id}">${currency(product.sizes[0].price)} ${product.sizes[0].name} bag</span>
           <span>Hard pretzel</span>
+        </div>
+        <div class="field">
+          <label for="bag-size-${product.id}">Bag size</label>
+          <select id="bag-size-${product.id}" data-bag-size="${product.id}">
+            ${product.sizes.map(size => `<option value="${size.id}">${size.name} (${currency(size.price)})</option>`).join('')}
+          </select>
         </div>
         <button class="primary-btn" type="button" data-add-to-cart="${product.id}">Add to order</button>
       </div>
     </article>
   `).join('');
+
+  grid.querySelectorAll('[data-bag-size]').forEach(select => {
+    select.addEventListener('change', () => {
+      const product = products.find(entry => entry.id === select.dataset.bagSize);
+      const price = grid.querySelector(`[data-current-price="${select.dataset.bagSize}"]`);
+      const size = product?.sizes.find(entry => entry.id === select.value);
+      if (size && price) {
+        price.textContent = `${currency(size.price)} ${size.name} bag`;
+      }
+    });
+  });
 
 }
 
@@ -289,7 +349,7 @@ function createOrderFromCart(formData) {
     customerEmail: formData.email,
     phone: formData.phone || '',
     notes: formData.notes || '',
-    items: items.map(item => ({ name: item.name, quantity: item.quantity, price: Number(item.price) })),
+    items: items.map(item => ({ name: item.name, size: item.sizeName, quantity: item.quantity, price: Number(item.price) })),
     total,
     createdAt: new Date().toISOString(),
     expiresAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
@@ -320,7 +380,7 @@ async function sendOrderEmail(order) {
     `Order expires: ${new Date(order.expiresAt).toLocaleDateString()}`,
     '',
     'Items:',
-    ...order.items.map(item => `- ${item.name} x${item.quantity} @ ${currency(item.price)}`),
+    ...order.items.map(item => `- ${item.name} (${item.size || 'small'} bag) x${item.quantity} @ ${currency(item.price)}`),
     '',
     `Notes: ${order.notes || 'None'}`,
     '',
@@ -385,7 +445,7 @@ function renderCheckoutPage() {
     <ul class="summary-list">
       ${items.map(item => `
         <li>
-          <span>${item.name} × ${item.quantity}</span>
+          <span>${item.name} (${item.size} bag) × ${item.quantity}</span>
           <span>${currency(item.lineTotal)}</span>
         </li>
       `).join('')}
@@ -451,6 +511,58 @@ async function getOrders() {
   }));
 }
 
+function sizeIdFromName(name) {
+  return String(name || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+}
+
+function addSizePriceRow(container, size = {}) {
+  const row = document.createElement('div');
+  row.className = 'size-price-row';
+  if (size.id) row.dataset.sizeId = size.id;
+  row.innerHTML = `
+    <label>Size name<input data-size-name type="text" placeholder="Small, Large, Party pack" required /></label>
+    <label>Price<input data-size-price type="number" min="0" step="0.01" placeholder="5.00" required /></label>
+    <button class="remove-item-btn" data-remove-size-row type="button" aria-label="Remove this size">Remove size</button>
+  `;
+  row.querySelector('[data-size-name]').value = size.name || '';
+  row.querySelector('[data-size-price]').value = size.price ?? '';
+  container.append(row);
+  bindSizeRowRemoval(row);
+}
+
+function bindSizeRowRemoval(scope) {
+  scope.querySelectorAll('[data-remove-size-row]').forEach(button => {
+    button.addEventListener('click', () => {
+      const container = button.closest('.size-price-list');
+      if (!container || container.querySelectorAll('.size-price-row').length <= 1) {
+        alert('Each product needs at least one size.');
+        return;
+      }
+      button.closest('.size-price-row').remove();
+    });
+  });
+}
+
+function readSizePriceRows(container) {
+  if (!container) return null;
+  const sizes = Array.from(container.querySelectorAll('.size-price-row')).map(row => {
+    const name = row.querySelector('[data-size-name]').value.trim();
+    const priceText = row.querySelector('[data-size-price]').value;
+    return {
+      id: row.dataset.sizeId || sizeIdFromName(name),
+      name,
+      price: Number(priceText),
+      hasPrice: priceText !== ''
+    };
+  });
+
+  const ids = sizes.map(size => size.id);
+  if (!sizes.length || sizes.some(size => !size.id || !size.name || !size.hasPrice || !Number.isFinite(size.price) || size.price < 0) || new Set(ids).size !== ids.length) {
+    return null;
+  }
+  return sizes.map(({ hasPrice, ...size }) => size);
+}
+
 function renderCatalogManager() {
   const catalogList = document.getElementById('catalogList');
   if (!catalogList) return;
@@ -463,14 +575,22 @@ function renderCatalogManager() {
   }
 
   catalogList.innerHTML = products.map(product => `
-    <div class="catalog-item" style="display:grid; gap:0.75rem; padding:0.9rem; border:1px solid var(--border); border-radius:12px; margin-bottom:0.75rem; background:var(--bg-soft);">
+    <div class="catalog-item" data-catalog-product="${product.id}" style="display:grid; gap:0.75rem; padding:0.9rem; border:1px solid var(--border); border-radius:12px; margin-bottom:0.75rem; background:var(--bg-soft);">
       <div class="field">
         <label>Product name</label>
         <input data-product-name="${product.id}" value="${product.name}" />
       </div>
-      <div class="field">
-        <label>Price</label>
-        <input data-product-price="${product.id}" type="number" min="0" step="0.01" value="${Number(product.price).toFixed(2)}" />
+      <div class="product-size-editor">
+        <div class="cart-header"><h4>Sizes and prices</h4><button class="secondary-btn" data-add-product-size type="button">Add size</button></div>
+        <div class="size-price-list" data-product-sizes>
+          ${product.sizes.map(size => `
+            <div class="size-price-row" data-size-id="${size.id}">
+              <label>Size name<input data-size-name type="text" value="${size.name}" required /></label>
+              <label>Price<input data-size-price type="number" min="0" step="0.01" value="${Number(size.price).toFixed(2)}" required /></label>
+              <button class="remove-item-btn" data-remove-size-row type="button" aria-label="Remove ${size.name} size">Remove size</button>
+            </div>
+          `).join('')}
+        </div>
       </div>
       <div class="field">
         <label>Description</label>
@@ -487,22 +607,33 @@ function renderCatalogManager() {
     </div>
   `).join('');
 
+  bindSizeRowRemoval(catalogList);
+  catalogList.querySelectorAll('[data-add-product-size]').forEach(button => {
+    button.addEventListener('click', () => {
+      addSizePriceRow(button.closest('[data-catalog-product]').querySelector('[data-product-sizes]'));
+    });
+  });
+
   catalogList.querySelectorAll('[data-save-product]').forEach(button => {
     button.addEventListener('click', async () => {
       const id = button.dataset.saveProduct;
       const nameInput = catalogList.querySelector(`[data-product-name="${id}"]`);
-      const priceInput = catalogList.querySelector(`[data-product-price="${id}"]`);
       const descriptionInput = catalogList.querySelector(`[data-product-description="${id}"]`);
       const emojiInput = catalogList.querySelector(`[data-product-emoji="${id}"]`);
+      const productCard = button.closest('[data-catalog-product]');
+      const sizes = readSizePriceRows(productCard?.querySelector('[data-product-sizes]'));
 
-      if (!nameInput || !priceInput || !descriptionInput || !emojiInput) return;
+      if (!nameInput || !sizes || !descriptionInput || !emojiInput) {
+        alert('Enter a unique name and a valid price for every size.');
+        return;
+      }
 
-      const products = productsCache;
+      const products = productsCache.map(product => ({ ...product, sizes: product.sizes.map(size => ({ ...size })) }));
       const target = products.find(product => product.id === id);
       if (!target) return;
 
       target.name = nameInput.value.trim() || target.name;
-      target.price = Number(priceInput.value) || 0;
+      target.sizes = sizes;
       target.description = descriptionInput.value.trim() || 'Seasoned hard pretzel.';
       target.emoji = emojiInput.value.trim() || '🥨';
 
@@ -588,7 +719,7 @@ async function renderAdminPage() {
     const expired = Date.now() > expiresOn.getTime();
     const statusClass = expired ? 'status-expired' : 'status-pending';
     const statusText = expired ? 'Expired' : 'Open';
-    const itemText = order.items.map(item => `${item.name} x${item.quantity}`).join(', ');
+    const itemText = order.items.map(item => `${item.name} (${item.size || 'small'} bag) x${item.quantity}`).join(', ');
 
     return `
       <tr>
@@ -690,25 +821,64 @@ function initAdminPage() {
 
   const productForm = document.getElementById('productForm');
   if (productForm) {
+    const productSizes = document.getElementById('newProductSizes');
+    const toggleProductForm = document.getElementById('toggleProductForm');
+    const cancelProductForm = document.getElementById('cancelProductForm');
+
+    if (productSizes && !productSizes.querySelector('.size-price-row')) {
+      addSizePriceRow(productSizes, { name: 'Small', price: 5 });
+      addSizePriceRow(productSizes, { name: 'Large', price: 8 });
+    }
+
+    if (toggleProductForm) {
+      toggleProductForm.addEventListener('click', () => {
+        const open = productForm.classList.contains('hidden');
+        productForm.classList.toggle('hidden', !open);
+        toggleProductForm.setAttribute('aria-expanded', String(open));
+        toggleProductForm.textContent = open ? 'Cancel adding product' : 'Add product';
+        if (open) document.getElementById('newProductName')?.focus();
+      });
+    }
+
+    const resetProductForm = () => {
+      productForm.reset();
+      productSizes.replaceChildren();
+      addSizePriceRow(productSizes, { name: 'Small', price: 5 });
+      addSizePriceRow(productSizes, { name: 'Large', price: 8 });
+      productForm.classList.add('hidden');
+      toggleProductForm?.setAttribute('aria-expanded', 'false');
+      if (toggleProductForm) toggleProductForm.textContent = 'Add product';
+    };
+
+    if (cancelProductForm) {
+      cancelProductForm.addEventListener('click', resetProductForm);
+    }
+
+    const addNewSizeButton = productForm.querySelector('[data-add-new-size]');
+    if (addNewSizeButton) {
+      addNewSizeButton.addEventListener('click', () => addSizePriceRow(productSizes));
+    }
+
     productForm.addEventListener('submit', async event => {
       event.preventDefault();
       const formData = new FormData(productForm);
       const name = String(formData.get('name') || '').trim();
-      const price = Number(formData.get('price'));
       const description = String(formData.get('description') || '').trim();
       const emoji = String(formData.get('emoji') || '').trim() || '🥨';
+      const sizes = readSizePriceRows(productSizes);
 
-      if (!name || Number.isNaN(price)) {
+      if (!name || !sizes) {
+        alert('Enter a product name and a valid, uniquely named price for every size.');
         return;
       }
 
-      const products = productsCache;
+      const products = [...productsCache];
       const id = name.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + Date.now().toString().slice(-5);
 
       products.push({
         id,
         name,
-        price,
+        sizes,
         description: description || 'Seasoned hard pretzel.',
         emoji
       });
@@ -719,7 +889,7 @@ function initAdminPage() {
         alert('Could not save the shared catalog. Check your connection and try again.');
         return;
       }
-      productForm.reset();
+      resetProductForm();
       renderProductGrid();
       renderCart();
       renderCheckoutPage();
@@ -747,7 +917,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.addEventListener('click', event => {
     const productButton = event.target.closest('[data-add-to-cart]');
     if (productButton) {
-      addToCart(productButton.dataset.addToCart);
+      const sizeSelect = document.getElementById(`bag-size-${productButton.dataset.addToCart}`);
+      addToCart(productButton.dataset.addToCart, sizeSelect?.value || 'small');
     }
   });
 });

@@ -13,19 +13,31 @@ The site uses Supabase for a shared menu, EmailJS configuration, and order list.
 
 The database is protected with row-level security. Anyone can read the menu and EmailJS's public configuration and submit an order. Only signed-in users can manage the catalog/settings or read and delete orders. Keep public sign-ups disabled so only the admin account can access those operations.
 
+## Publish code changes
+To publish code changes to GitHub Pages from VS Code:
+
+1. Open **Source Control** from the left sidebar.
+2. Review the changed files, enter a short commit message, and choose **Commit**.
+3. Choose **Sync Changes** or **Push** to send the commit to GitHub.
+4. GitHub Pages deploys from the configured repository branch. Check **Actions** in the GitHub repository for the Pages deployment to finish, then reload the live site.
+
+To preview locally first, run `python3 -m http.server 8000` from the project folder and open `http://localhost:8000`.
+
 ## Free email integration
 Order emails are sent with EmailJS. Its SDK is loaded from a CDN on the checkout page. Configure the EmailJS template to send to `finn1212@gmail.com` and use these template variables: `customer_name`, `customer_email`, `phone`, `order_id`, `order_total`, `order_expires`, `order_details`, `notes`, and `payment`. EmailJS's free plan has sending limits; check its pricing page for current limits.
 
 ## How to change pricing or add menu items
+Current default pricing is $5 for a Small bag and $8 for a Large bag for both Original and Crabby.
+
 1. Open the admin page at /admin.html.
-2. Enter the password: goosepretzels.
+2. Sign in with the Supabase admin email and password created during setup.
 3. Use the Catalog Manager section to:
-   - change an item's price
+   - change the Small bag or Large bag price independently
    - update the name or description
-   - add a new item listing
+   - click Add product to create a listing, then add any number of named sizes and prices
    - remove a listing that is no longer sold
 4. Click Save after each change.
-5. The menu and checkout totals automatically update for all visitors using Supabase.
+5. The menu displays both bag sizes, and checkout totals automatically update for all visitors using Supabase.
 
 ## Notes
 - Before Supabase is configured, the site can use browser-local demo data. Once connected, products, EmailJS settings, and orders are stored centrally and shared across devices.

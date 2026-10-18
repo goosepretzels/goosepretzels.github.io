@@ -9,6 +9,11 @@ revoke all on table public.shared_settings from anon, authenticated;
 grant select on table public.shared_settings to anon, authenticated;
 grant insert, update, delete on table public.shared_settings to authenticated;
 
+drop policy if exists "Public can read shared settings" on public.shared_settings;
+drop policy if exists "Admins can insert shared settings" on public.shared_settings;
+drop policy if exists "Admins can update shared settings" on public.shared_settings;
+drop policy if exists "Admins can delete shared settings" on public.shared_settings;
+
 create policy "Public can read shared settings"
 on public.shared_settings for select
 to anon, authenticated
@@ -48,6 +53,10 @@ alter table public.orders enable row level security;
 revoke all on table public.orders from anon, authenticated;
 grant insert on table public.orders to anon, authenticated;
 grant select, delete on table public.orders to authenticated;
+
+drop policy if exists "Customers can submit orders" on public.orders;
+drop policy if exists "Admins can read orders" on public.orders;
+drop policy if exists "Admins can delete orders" on public.orders;
 
 create policy "Customers can submit orders"
 on public.orders for insert
