@@ -180,6 +180,37 @@ function initTheme() {
   }
 }
 
+function setCartPanelOpen(open) {
+  const panel = document.getElementById('cartPanel');
+  const toggle = document.getElementById('cartToggle');
+  const drawer = document.getElementById('cartDrawer');
+  if (!panel || !toggle || !drawer) return;
+
+  panel.classList.toggle('is-open', open);
+  toggle.setAttribute('aria-expanded', String(open));
+  drawer.setAttribute('aria-hidden', String(!open));
+  drawer.inert = !open;
+}
+
+function initCartPanel() {
+  const toggle = document.getElementById('cartToggle');
+  const close = document.getElementById('cartClose');
+  if (!toggle || !close) return;
+
+  const desktopLayout = window.matchMedia('(min-width: 1024px)');
+  const syncCartLayout = () => setCartPanelOpen(desktopLayout.matches);
+  syncCartLayout();
+  desktopLayout.addEventListener('change', syncCartLayout);
+
+  toggle.addEventListener('click', () => {
+    setCartPanelOpen(toggle.getAttribute('aria-expanded') !== 'true');
+  });
+  close.addEventListener('click', () => setCartPanelOpen(false));
+  document.addEventListener('keydown', event => {
+    if (event.key === 'Escape') setCartPanelOpen(false);
+  });
+}
+
 function addToCart(productId, size) {
   const cart = getCart();
   const product = productsCache.find(entry => entry.id === productId);
@@ -902,6 +933,7 @@ function initAdminPage() {
 
 document.addEventListener('DOMContentLoaded', async () => {
   initTheme();
+  initCartPanel();
 
   try {
     await loadSharedSettings();

@@ -87,11 +87,15 @@
       </section>
     </main>
 
-    <aside class="cart-panel" aria-label="Shopping cart">
-      <div class="container cart-box">
+    <aside id="cartPanel" class="cart-panel" aria-label="Shopping cart">
+      <button id="cartToggle" class="cart-tab" type="button" aria-expanded="false" aria-controls="cartDrawer">
+        <span>Your order</span>
+        <span id="cartCount" class="cart-tab-count">0 items</span>
+      </button>
+      <div id="cartDrawer" class="cart-box" aria-hidden="true" inert>
         <div class="cart-header">
           <h3>Your order</h3>
-          <span id="cartCount">0 items</span>
+          <button id="cartClose" class="cart-close" type="button" aria-label="Close your order">×</button>
         </div>
         <div id="cartItems" class="cart-items"></div>
         <div class="cart-total-row">
