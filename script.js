@@ -628,7 +628,7 @@ function renderCheckoutPage() {
         alert('Your order has been sent successfully. You can review it in the admin page when you return.');
       } catch (emailError) {
         console.error('Order email failed:', emailError);
-        alert(`Your order was saved, but its email could not be sent. Please contact finn1212@gmail.com and include order ${order.id}.`);
+        alert(`Your order was saved, but its email could not be sent. Please contact finn121212@icloud.com and include order ${order.id}.`);
       }
     } catch (error) {
       console.error('Order could not be saved:', error);

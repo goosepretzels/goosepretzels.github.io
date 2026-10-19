@@ -24,7 +24,7 @@ To publish code changes to GitHub Pages from VS Code:
 To preview locally first, run `python3 -m http.server 8000` from the project folder and open `http://localhost:8000`.
 
 ## Free email integration
-Order emails are sent with EmailJS. Its SDK is loaded from a CDN on the checkout page. Configure the EmailJS template to send to `finn1212@gmail.com` and use these template variables: `customer_name`, `customer_email`, `phone`, `order_id`, `order_total`, `order_expires`, `order_details`, `notes`, and `payment`. EmailJS's free plan has sending limits; check its pricing page for current limits.
+Order emails are sent with EmailJS. Its SDK is loaded from a CDN on the checkout page. Configure the EmailJS template to send to `finn121212@icloud.com` and use these template variables: `customer_name`, `customer_email`, `phone`, `order_id`, `order_total`, `order_expires`, `order_details`, `notes`, and `payment`. EmailJS's free plan has sending limits; check its pricing page for current limits.
 
 ## How to change pricing or add menu items
 Current default pricing is $5 for a Small bag and $8 for a Large bag for both Original and Crabby.
