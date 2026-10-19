@@ -98,9 +98,20 @@
                   <label for="newProductDescription">Description</label>
                   <input id="newProductDescription" name="description" type="text" placeholder="Classic savory seasoning" required />
                 </div>
-                <div class="field">
-                  <label for="newProductEmoji">Emoji</label>
-                  <input id="newProductEmoji" name="emoji" type="text" maxlength="2" placeholder="🥨" />
+                <div class="field" data-product-visual-controls>
+                  <label for="newProductVisualType">Product image</label>
+                  <select id="newProductVisualType" name="visualType" data-product-visual-type>
+                    <option value="emoji">Use emoji</option>
+                    <option value="image">Upload image</option>
+                  </select>
+                  <label data-product-emoji-field>
+                    Emoji
+                    <input id="newProductEmoji" name="emoji" type="text" maxlength="2" placeholder="🥨" />
+                  </label>
+                  <label data-product-image-field hidden>
+                    Upload image
+                    <input name="image" type="file" accept="image/*" data-product-image />
+                  </label>
                 </div>
               </div>
               <div class="product-size-editor">

@@ -45,6 +45,117 @@ function normalizeProduct(product) {
   };
 }
 
+async function imageFileToDataUrl(file) {
+  if (!file || !file.type.startsWith('image/')) throw new Error('Choose a valid image file.');
+  if (file.size > 10 * 1024 * 1024) throw new Error('Choose an image smaller than 10 MB.');
+
+  let imageSource;
+  let objectUrl;
+  try {
+    try {
+      imageSource = await createImageBitmap(file);
+    } catch (error) {
+      objectUrl = URL.createObjectURL(file);
+      imageSource = await new Promise((resolve, reject) => {
+        const image = new Image();
+        image.onload = () => resolve(image);
+        image.onerror = () => reject(new Error('Could not decode this image. Try a self-contained SVG or PNG/JPEG.'));
+        image.src = objectUrl;
+      });
+    }
+
+    const scale = Math.min(1, 720 / Math.max(imageSource.width, imageSource.height));
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.round(imageSource.width * scale));
+    canvas.height = Math.max(1, Math.round(imageSource.height * scale));
+    const context = canvas.getContext('2d', { willReadFrequently: true });
+    context.drawImage(imageSource, 0, 0, canvas.width, canvas.height);
+
+    const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+    const pixels = imageData.data;
+    const edgeColor = [0, 0, 0];
+    let edgeAlpha = 0;
+    for (let row = 0; row < canvas.height; row++) {
+      for (let column = 0; column < canvas.width; column++) {
+        if (column !== 0 && column !== canvas.width - 1 && row !== 0 && row !== canvas.height - 1) continue;
+        const offset = (row * canvas.width + column) * 4;
+        const alpha = pixels[offset + 3] / 255;
+        edgeColor[0] += pixels[offset] * alpha;
+        edgeColor[1] += pixels[offset + 1] * alpha;
+        edgeColor[2] += pixels[offset + 2] * alpha;
+        edgeAlpha += alpha;
+      }
+    }
+
+    if (edgeAlpha) {
+      edgeColor[0] = Math.round(edgeColor[0] / edgeAlpha);
+      edgeColor[1] = Math.round(edgeColor[1] / edgeAlpha);
+      edgeColor[2] = Math.round(edgeColor[2] / edgeAlpha);
+    } else {
+      const fallback = getComputedStyle(document.body).getPropertyValue('--panel-alt').trim();
+      const match = fallback.match(/^#([\da-f]{6})$/i);
+      const fallbackHex = match ? match[1] : 'f0e5d3';
+      edgeColor[0] = parseInt(fallbackHex.slice(0, 2), 16);
+      edgeColor[1] = parseInt(fallbackHex.slice(2, 4), 16);
+      edgeColor[2] = parseInt(fallbackHex.slice(4, 6), 16);
+    }
+
+    const fadeWidth = Math.max(1, Math.round(Math.min(canvas.width, canvas.height) * 0.12));
+    for (let row = 0; row < canvas.height; row++) {
+      for (let column = 0; column < canvas.width; column++) {
+        const offset = (row * canvas.width + column) * 4;
+        const distance = Math.min(column, row, canvas.width - 1 - column, canvas.height - 1 - row);
+        const progress = Math.min(1, distance / fadeWidth);
+        const blend = progress * progress * (3 - 2 * progress);
+        const alpha = pixels[offset + 3] / 255;
+        for (let channel = 0; channel < 3; channel++) {
+          const source = pixels[offset + channel] * alpha + edgeColor[channel] * (1 - alpha);
+          pixels[offset + channel] = Math.round(edgeColor[channel] * (1 - blend) + source * blend);
+        }
+        pixels[offset + 3] = 255;
+      }
+    }
+    context.putImageData(imageData, 0, 0);
+
+    const edgeColorHex = `#${edgeColor.map(channel => channel.toString(16).padStart(2, '0')).join('')}`;
+    return { dataUrl: canvas.toDataURL('image/jpeg', 0.82), edgeColor: edgeColorHex };
+  } finally {
+    imageSource?.close?.();
+    if (objectUrl) URL.revokeObjectURL(objectUrl);
+  }
+}
+
+function softenLegacyProductImages(container) {
+  container.querySelectorAll('.product-image img').forEach(image => {
+    const frame = image.closest('.product-image');
+    if (!frame || frame.style.getPropertyValue('--product-image-edge') || image.dataset.edgeProcessing) return;
+
+    const originalSource = image.src;
+    image.dataset.edgeProcessing = 'true';
+    fetch(originalSource)
+      .then(response => {
+        if (!response.ok) throw new Error('Could not load product image.');
+        return response.blob();
+      })
+      .then(imageBlob => imageFileToDataUrl(imageBlob))
+      .then(processedImage => {
+        if (!image.isConnected || image.src !== originalSource) return;
+        frame.style.setProperty('--product-image-edge', processedImage.edgeColor);
+        frame.classList.add('has-product-image');
+        image.src = processedImage.dataUrl;
+      })
+      .catch(() => {});
+  });
+}
+
+function updateProductVisualFields(container) {
+  const visualType = container.querySelector('[data-product-visual-type]')?.value;
+  const emojiField = container.querySelector('[data-product-emoji-field]');
+  const imageField = container.querySelector('[data-product-image-field]');
+  if (emojiField) emojiField.hidden = visualType !== 'emoji';
+  if (imageField) imageField.hidden = visualType !== 'image';
+}
+
 let productsCache = defaultProducts.map(normalizeProduct);
 let emailJsConfigCache = {};
 
@@ -333,9 +444,11 @@ function renderProductGrid() {
     return;
   }
 
-  grid.innerHTML = products.map(product => `
+  grid.innerHTML = products.map(product => {
+    const edgeColor = /^#[\da-f]{6}$/i.test(product.imageEdgeColor || '') ? product.imageEdgeColor : '';
+    return `
     <article class="product-card">
-      <div class="product-image" aria-hidden="true">${product.emoji || '🥨'}</div>
+      <div class="product-image${product.image ? ' has-product-image' : ''}" ${edgeColor && product.image ? `style="--product-image-edge:${edgeColor}"` : ''} aria-hidden="true">${product.image ? `<img src="${product.image}" alt="" />` : (product.emoji || '🥨')}</div>
       <div class="product-body">
         <h3>${product.name}</h3>
         <p>${product.description || 'Seasoned hard pretzel.'}</p>
@@ -352,7 +465,9 @@ function renderProductGrid() {
         <button class="primary-btn" type="button" data-add-to-cart="${product.id}">Add to order</button>
       </div>
     </article>
-  `).join('');
+  `;
+  }).join('');
+  softenLegacyProductImages(grid);
 
   grid.querySelectorAll('[data-bag-size]').forEach(select => {
     select.addEventListener('change', () => {
@@ -627,9 +742,21 @@ function renderCatalogManager() {
         <label>Description</label>
         <input data-product-description="${product.id}" value="${product.description || ''}" />
       </div>
-      <div class="field">
-        <label>Emoji</label>
-        <input data-product-emoji="${product.id}" maxlength="2" value="${product.emoji || '🥨'}" />
+      <div class="field" data-product-visual-controls>
+        <label>Product image</label>
+        <select data-product-visual-type>
+          <option value="emoji" ${product.image ? '' : 'selected'}>Use emoji</option>
+          <option value="image" ${product.image ? 'selected' : ''}>Upload image</option>
+        </select>
+        <label data-product-emoji-field ${product.image ? 'hidden' : ''}>
+          Emoji
+          <input data-product-emoji="${product.id}" maxlength="2" value="${product.emoji || '🥨'}" />
+        </label>
+        <label data-product-image-field ${product.image ? '' : 'hidden'}>
+          Upload image
+          <input data-product-image type="file" accept="image/*" />
+          ${product.image ? `<img class="admin-product-image-preview" src="${product.image}" alt="Current product image" />` : ''}
+        </label>
       </div>
       <div class="inline-actions">
         <button class="action-btn" type="button" data-save-product="${product.id}">Save</button>
@@ -639,6 +766,9 @@ function renderCatalogManager() {
   `).join('');
 
   bindSizeRowRemoval(catalogList);
+  catalogList.querySelectorAll('[data-product-visual-type]').forEach(select => {
+    select.addEventListener('change', () => updateProductVisualFields(select.closest('[data-product-visual-controls]')));
+  });
   catalogList.querySelectorAll('[data-add-product-size]').forEach(button => {
     button.addEventListener('click', () => {
       addSizePriceRow(button.closest('[data-catalog-product]').querySelector('[data-product-sizes]'));
@@ -652,9 +782,11 @@ function renderCatalogManager() {
       const descriptionInput = catalogList.querySelector(`[data-product-description="${id}"]`);
       const emojiInput = catalogList.querySelector(`[data-product-emoji="${id}"]`);
       const productCard = button.closest('[data-catalog-product]');
+      const visualType = productCard?.querySelector('[data-product-visual-type]')?.value;
+      const imageInput = productCard?.querySelector('[data-product-image]');
       const sizes = readSizePriceRows(productCard?.querySelector('[data-product-sizes]'));
 
-      if (!nameInput || !sizes || !descriptionInput || !emojiInput) {
+      if (!nameInput || !sizes || !descriptionInput || (visualType === 'emoji' && !emojiInput)) {
         alert('Enter a unique name and a valid price for every size.');
         return;
       }
@@ -666,7 +798,23 @@ function renderCatalogManager() {
       target.name = nameInput.value.trim() || target.name;
       target.sizes = sizes;
       target.description = descriptionInput.value.trim() || 'Seasoned hard pretzel.';
-      target.emoji = emojiInput.value.trim() || '🥨';
+      if (visualType === 'emoji') {
+        target.emoji = emojiInput.value.trim() || '🥨';
+        delete target.image;
+        delete target.imageEdgeColor;
+      } else if (imageInput?.files[0]) {
+        try {
+          const processedImage = await imageFileToDataUrl(imageInput.files[0]);
+          target.image = processedImage.dataUrl;
+          target.imageEdgeColor = processedImage.edgeColor;
+        } catch (error) {
+          alert(error.message || 'Could not read that image. Choose another file.');
+          return;
+        }
+      } else if (!target.image) {
+        alert('Choose an image or switch to using an emoji.');
+        return;
+      }
 
       try {
         await saveProducts(products);
@@ -855,6 +1003,10 @@ function initAdminPage() {
     const productSizes = document.getElementById('newProductSizes');
     const toggleProductForm = document.getElementById('toggleProductForm');
     const cancelProductForm = document.getElementById('cancelProductForm');
+    const visualTypeInput = productForm.querySelector('[data-product-visual-type]');
+
+    visualTypeInput?.addEventListener('change', () => updateProductVisualFields(productForm));
+    updateProductVisualFields(productForm);
 
     if (productSizes && !productSizes.querySelector('.size-price-row')) {
       addSizePriceRow(productSizes, { name: 'Small', price: 5 });
@@ -873,6 +1025,7 @@ function initAdminPage() {
 
     const resetProductForm = () => {
       productForm.reset();
+      updateProductVisualFields(productForm);
       productSizes.replaceChildren();
       addSizePriceRow(productSizes, { name: 'Small', price: 5 });
       addSizePriceRow(productSizes, { name: 'Large', price: 8 });
@@ -896,6 +1049,8 @@ function initAdminPage() {
       const name = String(formData.get('name') || '').trim();
       const description = String(formData.get('description') || '').trim();
       const emoji = String(formData.get('emoji') || '').trim() || '🥨';
+      const visualType = String(formData.get('visualType') || 'emoji');
+      const imageFile = formData.get('image');
       const sizes = readSizePriceRows(productSizes);
 
       if (!name || !sizes) {
@@ -905,13 +1060,23 @@ function initAdminPage() {
 
       const products = [...productsCache];
       const id = name.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + Date.now().toString().slice(-5);
+      let processedImage;
+      if (visualType === 'image') {
+        try {
+          processedImage = await imageFileToDataUrl(imageFile);
+        } catch (error) {
+          alert(error.message || 'Choose an image for this product.');
+          return;
+        }
+      }
 
       products.push({
         id,
         name,
         sizes,
         description: description || 'Seasoned hard pretzel.',
-        emoji
+        emoji,
+        ...(processedImage ? { image: processedImage.dataUrl, imageEdgeColor: processedImage.edgeColor } : {})
       });
 
       try {
